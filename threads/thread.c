@@ -126,7 +126,9 @@ thread_tick (void)
 
   /*
      Here timer based scheduling could be implemented-----------------------------------------------------------------------------------------------<<
-     Probably not recommended, though.
+     Check for alarms in a list of <thread, time> array.
+     if a thread is waiting for a passed time, put it in process queue (&ready_list)
+     (function to do so may exist in this file).
   */
 
 
