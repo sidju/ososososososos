@@ -47,7 +47,7 @@ void oneTask(task_t task);/*Task requires to use the bus and executes methods be
 	void leaveSlot(task_t task); /* task release the slot */
 
 
-struct bus_t bus;
+struct bus_t *bus;
 
 /* initializes semaphores */ 
 void init_bus(void){
@@ -59,7 +59,6 @@ void init_bus(void){
   bus->running = 0;
   
   random_init((unsigned int)123456789); 
-
 }
 
 /*
@@ -147,14 +146,64 @@ void leaveSlot(task_t task)
     /* FIXME implement */
 }
 
+struct semaphore *sema get_sema(struct task_t *task)
+{
+  if (task->direction == SENDER)
+    {
+      if (task->priority == HIGH)
+	{
+	  return &bus->out_high;
+	}
+      else
+	{
+	  return &bus->out;
+	}
+    }
+  else
+    {
+      if (task->priority == HIGH)
+	{
+	  return &bus->in_high;
+	}
+      else
+	{
+	  return &bus->in;
+	}
+    }
+}
+
+void trafficController(struct task_t *task)
+{
+  /* Disable interrupts to safely poke at semaphores */
+  enum intr_level old_level = intr_disable();
+
+  if(bus->running == 0)
+    {
+      if (task->direction == SENDER)
+	{
+	  if (task->priority == HIGH)
+	    {
+	      sema_up(&bus->out_high);
+	    }
+	  else
+	    {
+	      sema_up(&bus->out);
+	    }
+	}
+      else
+	{
+	  if (task->priority == HIGH)
+	    {
+	      sema_up(&bus->in_high);
+	    }
+	  else
+	    {
+	      sema_up(&bus->in);
+	    }
+	}
+    }
+	
 /* 
-   Global variables:
-   out_high
-   out
-   in_high
-   in
-
-
    batchScheduler:
    lots of loops declaring threads
 
