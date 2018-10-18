@@ -102,20 +102,61 @@ void oneTask(task_t task) {
 /* task tries to get slot on the bus subsystem */
 void getSlot(task_t task) 
 {
-    msg("NOT IMPLEMENTED");
-    /* FIXME implement */
+  /* Aquire the communication semaphor fo current thread */
+
+  /* If priority and no priority waiting on other side (check the queue), change direction */
+
+  /* If task and no task waiting on other side (check the queue), change direction */
+  
+  msg("NOT IMPLEMENTED");
+  /* FIXME implement */
 }
 
 /* task processes data on the bus send/receive */
-void transferData(task_t task) 
+void transferData(task_t task)
 {
-    msg("NOT IMPLEMENTED");
-    /* FIXME implement */
+  /* "transfer data" aka. sleep */
+  msg("NOT IMPLEMENTED");
+  /* FIXME implement */
 }
 
 /* task releases the slot */
 void leaveSlot(task_t task) 
 {
+  /* Return the semaphor */
+
+  /* If priority, no priority waiting on own side and priority waiting on ther side (check the queue), change direction */
+
+  /* If task and no task waiting from own side (check the queue), change direction */
+  
+
     msg("NOT IMPLEMENTED");
     /* FIXME implement */
 }
+
+/* 
+   Global variables:
+   out_high
+   out
+   in_high
+   in
+
+
+   batchScheduler:
+   lots of loops declaring threads
+
+
+   getSlot:
+   add self to correct semaphor queue (always full)
+   run trafficController(STARTING) to get semaphor if possible
+
+   leaveSlot:
+   run trafficController(STOPPING) to give semaphor to it
+
+
+   Static variables in trafficController:
+   Semaphores held by controller is bus
+   Direction shown by current_direction
+   When changing direction, set next_direction 
+
+*/
