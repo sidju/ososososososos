@@ -86,8 +86,22 @@ void init_bus(void){
 void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
         unsigned int num_priority_send, unsigned int num_priority_receive)
 {
-    msg("NOT IMPLEMENTED");
-    /* FIXME implement */
+  for(int i = 0; i < num_tasks_send; i++)
+    {
+      senderTask(NULL);
+    }
+  for(int i = 0; i < num_tasks_receive; i++)
+    {
+      receiverTask(NULL);
+    }
+  for(int i = 0; i < num_priority_send; i++)
+    {
+      senderPriorityTask(NULL);
+    }
+  for(int i = 0; i < num_priority_receive; i++)
+    {
+      receiverPriorityTask(NULL);
+    }
 }
 
 /* Normal task,  sending data to the accelerator */
