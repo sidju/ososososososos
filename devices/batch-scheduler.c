@@ -292,7 +292,6 @@ void trafficController(task_t *task, bool starting)
    batchScheduler:
    lots of loops declaring threads
 
-
    getSlot:
    add self to correct semaphor queue (always full)
    run trafficController(STARTING) to get semaphor if possible
@@ -300,9 +299,8 @@ void trafficController(task_t *task, bool starting)
    leaveSlot:
    run trafficController(STOPPING) to give semaphor to it
 
-
-   Static variables in trafficController:
-   Semaphores held by controller is bus
+   Semaphores held by controller is bus queues
+   int holds current users on the bus
    Direction shown by current_direction
    When changing direction, set next_direction 
 
