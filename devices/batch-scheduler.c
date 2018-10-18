@@ -23,6 +23,15 @@ typedef struct {
 	int priority;
 } task_t;
 
+
+typedef struct {
+  struct semaphore out_high;
+  struct semaphore out;
+  struct semaphore in_high;
+  struct semaphore in;
+  int running;
+} bus_t;
+
 void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
         unsigned int num_priority_send, unsigned int num_priority_receive);
 
@@ -38,14 +47,18 @@ void oneTask(task_t task);/*Task requires to use the bus and executes methods be
 	void leaveSlot(task_t task); /* task release the slot */
 
 
+struct bus_t bus;
 
 /* initializes semaphores */ 
-void init_bus(void){ 
- 
-    random_init((unsigned int)123456789); 
-    
-    msg("NOT IMPLEMENTED");
-    /* FIXME implement */
+void init_bus(void){
+  sema_init(&bus->out_high, 0);
+  sema_init(&bus->out, 0);
+  sema_init(&bus->in_high, 0);
+  sema_init(&bus->in, 0);
+
+  bus->running = 0;
+  
+  random_init((unsigned int)123456789); 
 
 }
 
