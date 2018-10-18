@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "devices/timer.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -124,15 +125,8 @@ thread_tick (void)
 {
   struct thread *t = thread_current ();
 
-  /*
-     Here timer based scheduling could be implemented-----------------------------------------------------------------------------------------------<<
-     Check for alarms in a list of <thread, time> array.
-     if a thread is waiting for a passed time, put it in process queue (&ready_list)
-     (function to do so may exist in this file).
-  */
+  thread_foreach( timer_alarm_check, NULL);
 
-
-  
   /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
@@ -576,6 +570,86 @@ schedule (void)
     prev = switch_threads (cur, next);
   thread_schedule_tail (prev);
 }
+
+/*
+ *
+ * Squid
+ * FROM HERE ..
+ *
+ */
+
+/*
+typedef struct alarm_list
+{
+  struct thread cur;
+  int64_t time;
+  struct alarm_list * next;
+
+} alarm_list_t;
+*/
+
+/*
+//A
+void 
+alarm_list_add(alarm_list_t * head, struct thread cur, int64_t time)
+{
+  alarm_list_t * current = head;
+  
+  while (current->next != NULL)
+  {
+     current = current->next;	
+  }
+
+//Don't know why sizeof doesnt work ..
+  current->next = malloc(sizeof(alarm_list_t));
+  current->next->cur;
+  current->next->time;
+  current->next-> NULL;
+
+}
+
+void
+set_alarm(int64_t time)
+{
+
+ // This whole thing is ????
+ // General idea:
+ //   * set_alarm creates variable head that points to first item in list
+ //   * we call alarm_list_add that adds an item to the struct-list
+ //   * Repeat?
+ //
+ 
+ alarm_list_t * head = NULL;
+ head = malloc(sizeof(alarm_list_t));
+  
+  if( head == NULL)
+   {
+     return;
+   } 
+
+alarm_list_add(head, running_thread(),time);
+     	
+}
+
+
+void
+check_alarm(alarm_list_t * head)
+{
+  alarm_list_t * current = head;
+
+  while(current->next != NULL)
+   {
+     if(
+   }
+
+}
+  */
+/*
+ * .. TO HERE
+ *
+ */  
+
+
 
 /* Returns a tid to use for a new thread. */
 static tid_t

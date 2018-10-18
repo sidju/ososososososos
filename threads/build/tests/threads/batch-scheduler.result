@@ -1,8 +1,0 @@
-FAIL
-Kernel panic in run: PANIC at ../../tests/threads/tests.c:41 in run_test(): no test named "batch-scheduler"
-Call stack: 0xc0028309 0xc002a252 0xc00207d1 0xc0020771
-Translation of call stack:
-0xc0028309: debug_panic (.../../lib/kernel/debug.c:38)
-0xc002a252: intrff_stub (threads/intr-stubs.S:0)
-0xc00207d1: run_task (.../../../threads/init.c:292)
-0xc0020771: run_actions (.../../../threads/init.c:341)

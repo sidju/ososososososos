@@ -89,11 +89,40 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
+  if( ticks > 0 )
+    { 
+      int64_t start;
+      enum intr_level old_level;
+      struct thread *t;
 
-  ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+      old_level = intr_disable();
+      start = timer_ticks ();
+      t = thread_current();
+      t->alarm = start + ticks;
+      t->alarm_set = true;
+      //Add thread to alarmed_threads list
+      thread_block();
+      intr_set_level (old_level);
+      /*
+	ASSERT (intr_get_level () == INTR_ON);
+	while (timer_elapsed (start) < ticks) 
+	thread_yield ();
+      */
+    }
+}
+
+/* Checks if the thread's alarm was set, has passed and the thread should be unblocked.
+ * If it should, then it is.
+ */
+void
+timer_alarm_check (struct thread *t, void *aux)
+{
+  if ( (t->alarm <= timer_ticks()) && (t->alarm_set) && (t->status == THREAD_BLOCKED))
+    {
+      t->alarm_set = false;
+      //Remove from alarmed_list, if created
+      thread_unblock(t);
+    }
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -159,6 +188,33 @@ timer_ndelay (int64_t ns)
   real_time_delay (ns, 1000 * 1000 * 1000);
 }
 
+
+
+/*
+ *
+ *
+ *
+ * Squid
+ *
+ *
+ *
+ */
+/*
+void
+sleep (int64_t ticks) 
+{
+
+  ticks = ticks + timer_ticks();
+  set_alarm(ticks);
+
+  ASSERT (intr_get_level () == INTR_ON);
+  while (timer_elapsed (start) < ticks) 
+    thread_yield ();
+   thread_block();
+   return;
+}
+*/
+
 /* Prints timer statistics. */
 void
 timer_print_stats (void) 
@@ -170,8 +226,13 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
+  enum intr_level old_level;
+  
+  old_level = intr_disable ();
   ticks++;
   thread_tick ();
+  intr_set_level (old_level);
+
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
