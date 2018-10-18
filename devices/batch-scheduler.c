@@ -30,6 +30,9 @@ typedef struct {
   struct semaphore in_high;
   struct semaphore in;
   int running;
+  int direction;
+  int next_direction;
+  
 } bus_t;
 
 void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
@@ -57,6 +60,8 @@ void init_bus(void){
   sema_init(&bus->in, 0);
 
   bus->running = 0;
+  bus->direction = SENDER;
+  bus->next_direction = SENDER
   
   random_init((unsigned int)123456789); 
 }
@@ -146,6 +151,7 @@ void leaveSlot(task_t task)
     /* FIXME implement */
 }
 
+/* get correct semaphore for the given task */
 struct semaphore *sema get_sema(struct task_t *task)
 {
   if (task->direction == SENDER)
@@ -172,37 +178,95 @@ struct semaphore *sema get_sema(struct task_t *task)
     }
 }
 
-void trafficController(struct task_t *task)
+void trafficController(struct task_t *task, bool starting)
 {
   /* Disable interrupts to safely poke at semaphores */
   enum intr_level old_level = intr_disable();
 
-  if(bus->running == 0)
+  /* keep track of tasks running */
+  if (!starting)
     {
-      if (task->direction == SENDER)
+      bus->running--;
+    }
+
+  /* if ready to change direction, do so */
+  if (bus->running == 0 && bus->direction!=bus->next_direction)
+    {
+      bus->direction = bus->next_direction;
+    }
+  
+  /* if direction is not currently changing, see if it should */
+  /* if direction shouldn't change, add task */    
+  if (bus->direction == bus->next_direction)
+    {
+      if (bus->direction == SENDER)
 	{
-	  if (task->priority == HIGH)
+	  if (!list_empty (&bus->out_high->waiters))
 	    {
-	      sema_up(&bus->out_high);
+	      if (bus->running > BUS_CAPACITY)
+		{
+		  /* if there is space, start most relevant service */
+		  bus->running++;
+		  sema_up(&bus->out_high);
+		}
 	    }
-	  else
+	  else if (!list_empty (&bus->in_high->waiters))
 	    {
-	      sema_up(&bus->out);
+	      /* if change if direction is due, start it */
+	      bus->next_direction = RECEIVER;
+	    }
+	  else if (!list_empty (&bus->out->waiters))
+	    {
+	      if (bus->running > BUS_CAPACITY)
+		{
+		  /* if there is space, start most relevant service */
+		  bus->running++;
+		  sema_up(&bus->out_high);
+		}
+	    }
+	  else if (!list_empty (&bus->in->waiters))
+	    {
+	      /* if change if direction is due, start it */
+	      bus->next_direction = RECEIVER;
 	    }
 	}
-      else
+      else /* Bus is RECEIVER */
 	{
-	  if (task->priority == HIGH)
+	  if (!list_empty (&bus->in_high->waiters))
 	    {
-	      sema_up(&bus->in_high);
+	      if (bus->running > BUS_CAPACITY)
+		{
+		  /* if there is space, start most relevant service */
+		  bus->running++;
+		  sema_up(&bus->out_high);
+		}
 	    }
-	  else
+	  else if (!list_empty (&bus->out_high->waiters))
 	    {
-	      sema_up(&bus->in);
+	      /* if change if direction is due, start it */
+	      bus->next_direction = RECEIVER;
+	    }
+	  else if (!list_empty (&bus->in->waiters))
+	    {
+	      if (bus->running > BUS_CAPACITY)
+		{
+		  /* if there is space, start most relevant service */
+		  bus->running++;
+		  sema_up(&bus->out_high);
+		}
+	    }
+	  else if (!list_empty (&bus->out->waiters))
+	    {
+	      /* if change if direction is due, start it */
+	      bus->next_direction = RECEIVER;
 	    }
 	}
     }
-	
+  intr_set_level (old_level);
+}
+  
+  
+  
 /* 
    batchScheduler:
    lots of loops declaring threads
