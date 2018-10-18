@@ -7,6 +7,8 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "lib/random.h" //generate random numbers
+#include "devices/timer.h"
+#include "threads/interrupt.h"
 
 #define BUS_CAPACITY 3
 #define SENDER 0
@@ -25,10 +27,10 @@ typedef struct {
 
 
 typedef struct {
-  struct semaphore out_high;
-  struct semaphore out;
-  struct semaphore in_high;
-  struct semaphore in;
+  struct semaphore *out_high;
+  struct semaphore *out;
+  struct semaphore *in_high;
+  struct semaphore *in;
   int running;
   int direction;
   int next_direction;
@@ -38,10 +40,14 @@ typedef struct {
 void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
         unsigned int num_priority_send, unsigned int num_priority_receive);
 
+void init_bus(void);
 void senderTask(void *);
 void receiverTask(void *);
 void senderPriorityTask(void *);
 void receiverPriorityTask(void *);
+struct semaphore* get_sema(task_t *);
+void trafficController(task_t *, bool );
+
 
 
 void oneTask(task_t task);/*Task requires to use the bus and executes methods below*/
@@ -50,18 +56,18 @@ void oneTask(task_t task);/*Task requires to use the bus and executes methods be
 	void leaveSlot(task_t task); /* task release the slot */
 
 
-struct bus_t *bus;
+bus_t *bus;
 
 /* initializes semaphores */ 
 void init_bus(void){
-  sema_init(&bus->out_high, 0);
-  sema_init(&bus->out, 0);
-  sema_init(&bus->in_high, 0);
-  sema_init(&bus->in, 0);
+  sema_init(bus->out_high, 0);
+  sema_init(bus->out, 0);
+  sema_init(bus->in_high, 0);
+  sema_init(bus->in, 0);
 
   bus->running = 0;
   bus->direction = SENDER;
-  bus->next_direction = SENDER
+  bus->next_direction = SENDER;
   
   random_init((unsigned int)123456789); 
 }
@@ -116,6 +122,7 @@ void oneTask(task_t task) {
 }
 
 
+
 /* task tries to get slot on the bus subsystem */
 void getSlot(task_t task) 
 {
@@ -124,17 +131,17 @@ void getSlot(task_t task)
   /* If priority and no priority waiting on other side (check the queue), change direction */
 
   /* If task and no task waiting on other side (check the queue), change direction */
-  
-  msg("NOT IMPLEMENTED");
-  /* FIXME implement */
+ sema_down(get_sema(&task));
+ trafficController(&task, true);
+
+ 
 }
 
 /* task processes data on the bus send/receive */
 void transferData(task_t task)
 {
-  /* "transfer data" aka. sleep */
-  msg("NOT IMPLEMENTED");
-  /* FIXME implement */
+  //Sleepy boy (Does the task/data transfer).
+  timer_msleep(1); 
 }
 
 /* task releases the slot */
@@ -145,40 +152,40 @@ void leaveSlot(task_t task)
   /* If priority, no priority waiting on own side and priority waiting on ther side (check the queue), change direction */
 
   /* If task and no task waiting from own side (check the queue), change direction */
-  
 
-    msg("NOT IMPLEMENTED");
-    /* FIXME implement */
+ trafficController(&task, false);
+
+
 }
 
 /* get correct semaphore for the given task */
-struct semaphore *sema get_sema(struct task_t *task)
+struct semaphore* get_sema(task_t *task)
 {
   if (task->direction == SENDER)
     {
       if (task->priority == HIGH)
 	{
-	  return &bus->out_high;
+	  return bus->out_high;
 	}
       else
 	{
-	  return &bus->out;
+	  return bus->out;
 	}
     }
   else
     {
       if (task->priority == HIGH)
 	{
-	  return &bus->in_high;
+	  return bus->in_high;
 	}
       else
 	{
-	  return &bus->in;
+	  return bus->in;
 	}
     }
 }
 
-void trafficController(struct task_t *task, bool starting)
+void trafficController(task_t *task, bool starting)
 {
   /* Disable interrupts to safely poke at semaphores */
   enum intr_level old_level = intr_disable();
@@ -207,7 +214,7 @@ void trafficController(struct task_t *task, bool starting)
 		{
 		  /* if there is space, start most relevant service */
 		  bus->running++;
-		  sema_up(&bus->out_high);
+		  sema_up(bus->out_high);
 		}
 	    }
 	  else if (!list_empty (&bus->in_high->waiters))
@@ -221,7 +228,7 @@ void trafficController(struct task_t *task, bool starting)
 		{
 		  /* if there is space, start most relevant service */
 		  bus->running++;
-		  sema_up(&bus->out_high);
+		  sema_up(bus->out_high);
 		}
 	    }
 	  else if (!list_empty (&bus->in->waiters))
@@ -234,11 +241,11 @@ void trafficController(struct task_t *task, bool starting)
 	{
 	  if (!list_empty (&bus->in_high->waiters))
 	    {
-	      if (bus->running > BUS_CAPACITY)
+	      if (bus->running < BUS_CAPACITY)
 		{
 		  /* if there is space, start most relevant service */
 		  bus->running++;
-		  sema_up(&bus->out_high);
+		  sema_up(bus->out_high);
 		}
 	    }
 	  else if (!list_empty (&bus->out_high->waiters))
@@ -248,11 +255,11 @@ void trafficController(struct task_t *task, bool starting)
 	    }
 	  else if (!list_empty (&bus->in->waiters))
 	    {
-	      if (bus->running > BUS_CAPACITY)
+	      if (bus->running < BUS_CAPACITY)
 		{
 		  /* if there is space, start most relevant service */
 		  bus->running++;
-		  sema_up(&bus->out_high);
+		  sema_up(bus->out_high);
 		}
 	    }
 	  else if (!list_empty (&bus->out->waiters))
