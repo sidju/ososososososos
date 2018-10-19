@@ -91,18 +91,22 @@ void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
 
   for(i = 0; i < num_tasks_send; i++)
     {
+      thread_create ("", 0, senderTask, NULL);
       senderTask(NULL);
     }
   for(i = 0; i < num_task_receive; i++)
     {
+      thread_create ("", 0, receiverTask, NULL);
       receiverTask(NULL);
     }
   for(i = 0; i < num_priority_send; i++)
     {
+      thread_create ("", 1, senderPriorityTask, NULL);
       senderPriorityTask(NULL);
     }
   for(i = 0; i < num_priority_receive; i++)
     {
+      thread_create ("", 1, receiverPriorityTask, NULL);
       receiverPriorityTask(NULL);
     }
 }
@@ -158,7 +162,7 @@ void getSlot(task_t task)
 void transferData(task_t task)
 {
   //Sleepy boy (Does the task/data transfer).
-  timer_msleep(1); 
+  timer_usleep(1); 
 }
 
 /* task releases the slot */
