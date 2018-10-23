@@ -67,7 +67,7 @@ static struct semaphore d;
 /* initializes semaphores */ 
 void init_bus(void){
   struct semaphore* temp;
-  printf("init_bus ENTERED\n");
+   /* printf("init_bus ENTERED\n"); */
 
   bus = &allo_bus;
   
@@ -85,7 +85,7 @@ void init_bus(void){
   bus->direction = SENDER;
   bus->next_direction = SENDER;
   random_init((unsigned int)123456789);
-  printf("init_bus DONE\n");
+ /* printf("init_bus DONE\n"); */
 }
 
 /*
@@ -102,7 +102,7 @@ void init_bus(void){
 void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
         unsigned int num_priority_send, unsigned int num_priority_receive)
 {
- printf("scheduling starting\n");
+ /* printf("scheduling starting\n"); */
  unsigned int i;
 
   for(i = 0; i < num_tasks_send; i++)
@@ -121,7 +121,7 @@ void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
     {
       thread_create ("", 1, receiverPriorityTask, NULL);
     }
-   printf("Scheduling DONE\n");
+   /* printf("Scheduling DONE\n"); */
 }
 
 /* Normal task,  sending data to the accelerator */
@@ -175,7 +175,7 @@ void transferData(task_t task)
 {
   /*Sleepy boy (Does the task/data transfer).
   timer_usleep(1);*/
-  printf("Doing stuffs\n");
+ /* printf("Doing stuffs\n"); */
 }
 
 /* task releases the slot */
@@ -223,7 +223,7 @@ void trafficController(task_t *task, bool starting)
   if (!starting)
     {
       bus->running--;
-      printf("One freed, now %d running", bus->running);
+      /* printf("One freed, now %d running", bus->running); */
     }
 
   /* If currently changing direction, don't check for changing direction */
@@ -256,7 +256,7 @@ void trafficController(task_t *task, bool starting)
 		 )
 		{
 	      
-		  printf("Changing direction\n");
+		  /* printf("Changing direction\n"); */
 		  bus->next_direction = RECEIVER;
 		}
 	    }
@@ -286,7 +286,7 @@ void trafficController(task_t *task, bool starting)
 		  )
 		 )
 		{
-		  printf("Chaning back direction\n");
+		 /* printf("Chaning back direction\n"); */
 		  bus->next_direction = SENDER;
 		}
 	    }
@@ -313,7 +313,7 @@ void trafficController(task_t *task, bool starting)
 	      if (bus->running < BUS_CAPACITY)
 		{
 		  /* if there is space, start most relevant service */
-		  printf("Starting task\n");
+		 /* printf("Starting task\n"); */
 		  bus->running++;
 		  sema_up(bus->out_high);
 		}
