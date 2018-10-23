@@ -60,7 +60,8 @@ add_waiter (struct thread *t)
 {
   enum intr_level old_level = intr_disable ();
   /* insert thread at correct time in alarm_list */
-  list_insert_ordered(&waiting_list, &t->time, is_after, NULL); 
+  list_insert_ordered(&waiting_list, &t->time, is_after, NULL);
+  thread_block();
 
   intr_set_level (old_level);
 }
@@ -71,6 +72,7 @@ wake_waiters ()
   struct list_elem *e;
   struct thread *t;
 
+  enum intr_level old_level = intr_disable ();
   for (e = list_begin (&waiting_list); e != list_end (&waiting_list); e = list_next (e))
     {
       t = list_entry (e, struct thread, time);
@@ -81,6 +83,7 @@ wake_waiters ()
       thread_unblock(t);
       list_remove (e);
     }
+  intr_set_level (old_level);
   return;
 }
 	 
