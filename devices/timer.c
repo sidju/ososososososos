@@ -61,7 +61,7 @@ add_waiter (struct thread *t)
   enum intr_level old_level = intr_disable ();
   /* insert thread at correct time in alarm_list */
   list_insert_ordered(&waiting_list, &t->time, is_after, NULL); 
-
+  thread_block();
   intr_set_level (old_level);
 }
 

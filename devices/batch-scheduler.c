@@ -304,7 +304,8 @@ void trafficController(task_t *task, bool starting)
   if (bus->direction == bus->next_direction)
     {
       
-      printf("Looking to do stuff\n");
+      /* printf("Looking to do stuff\n"); */
+
       if (bus->direction == SENDER)
 	{
 	  if (!list_empty (&bus->out_high->waiters) ||
