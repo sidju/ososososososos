@@ -31,6 +31,7 @@ typedef struct {
   struct semaphore *out;
   struct semaphore *in_high;
   struct semaphore *in;
+  
   int running;
   int direction;
   int next_direction;
@@ -56,10 +57,25 @@ void oneTask(task_t task);/*Task requires to use the bus and executes methods be
 	void leaveSlot(task_t task); /* task release the slot */
 
 
-bus_t *bus;
+static bus_t *bus;
+static bus_t allo_bus;
+static struct semaphore a;
+static struct semaphore b;
+static struct semaphore c;
+static struct semaphore d;
 
 /* initializes semaphores */ 
 void init_bus(void){
+  struct semaphore* temp;
+  printf("init_bus ENTERED\n");
+
+  bus = &allo_bus;
+  
+  bus->out_high = &a;
+  bus->out = &b;
+  bus->in_high = &c;
+  bus->in = &d;
+
   sema_init(bus->out_high, 0);
   sema_init(bus->out, 0);
   sema_init(bus->in_high, 0);
@@ -68,8 +84,8 @@ void init_bus(void){
   bus->running = 0;
   bus->direction = SENDER;
   bus->next_direction = SENDER;
-  
-  random_init((unsigned int)123456789); 
+  random_init((unsigned int)123456789);
+  printf("init_bus DONE\n");
 }
 
 /*
@@ -86,29 +102,26 @@ void init_bus(void){
 void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
         unsigned int num_priority_send, unsigned int num_priority_receive)
 {
-
+ printf("scheduling starting\n");
  unsigned int i;
 
   for(i = 0; i < num_tasks_send; i++)
     {
       thread_create ("", 0, senderTask, NULL);
-      senderTask(NULL);
     }
   for(i = 0; i < num_task_receive; i++)
     {
       thread_create ("", 0, receiverTask, NULL);
-      receiverTask(NULL);
     }
   for(i = 0; i < num_priority_send; i++)
     {
       thread_create ("", 1, senderPriorityTask, NULL);
-      senderPriorityTask(NULL);
     }
   for(i = 0; i < num_priority_receive; i++)
     {
       thread_create ("", 1, receiverPriorityTask, NULL);
-      receiverPriorityTask(NULL);
     }
+   printf("Scheduling DONE\n");
 }
 
 /* Normal task,  sending data to the accelerator */
@@ -152,28 +165,23 @@ void getSlot(task_t task)
   /* If priority and no priority waiting on other side (check the queue), change direction */
 
   /* If task and no task waiting on other side (check the queue), change direction */
- sema_down(get_sema(&task));
- trafficController(&task, true);
 
- 
+   trafficController(&task, true);
+   sema_down(get_sema(&task));
 }
 
 /* task processes data on the bus send/receive */
 void transferData(task_t task)
 {
-  //Sleepy boy (Does the task/data transfer).
-  timer_usleep(1); 
+  /*Sleepy boy (Does the task/data transfer).
+  timer_usleep(1);*/
+  printf("Doing stuffs\n");
 }
 
 /* task releases the slot */
 void leaveSlot(task_t task) 
 {
-  /* Return the semaphor */
-
-  /* If priority, no priority waiting on own side and priority waiting on ther side (check the queue), change direction */
-
-  /* If task and no task waiting from own side (check the queue), change direction */
-
+  /* Return the semaphor through traffic controller */
  trafficController(&task, false);
 
 
@@ -215,6 +223,74 @@ void trafficController(task_t *task, bool starting)
   if (!starting)
     {
       bus->running--;
+      printf("One freed, now %d running", bus->running);
+    }
+
+  /* If currently changing direction, don't check for changing direction */
+  if (bus->direction == bus->next_direction)
+    {  
+      /* See if direction should be changed based on calling task and semaphore waiters */
+      if (bus->direction == SENDER)
+	{
+	  /*if no high priority using current direction change is possible*/
+	  /*No high using*/
+	  if(list_empty (&bus->out_high->waiters) &&
+	     !(task->priority == HIGH && task->direction == SENDER && starting))
+	    {
+	      /*The if from hell*/
+	      if(
+		 /*if high in other direction exist, change direction*/
+		 /*High wanting*/
+		 (!list_empty (&bus->in_high->waiters) ||
+		  (task->priority == HIGH && task->direction == RECEIVER && starting)
+		  ) ||
+		 /*if normal waiting and no normal using, change direction*/
+		 (/*normal waiting*/
+		  (!list_empty (&bus->in->waiters) ||
+		   (task->priority == NORMAL && task->direction == RECEIVER && starting)
+		   ) &&
+		  /*No normal using*/
+		  (list_empty (&bus->out->waiters) &&
+		   !(task->priority == NORMAL && task->direction == SENDER && starting))
+		  )
+		 )
+		{
+	      
+		  printf("Changing direction\n");
+		  bus->next_direction = RECEIVER;
+		}
+	    }
+	}
+      else /* Is RECIEVER */
+	{
+	  /*if no high priority using current direction change is possible*/
+	  /*No high using*/
+	  if(list_empty (&bus->in_high->waiters) &&
+	     !(task->priority == HIGH && task->direction == RECEIVER && starting))
+	    {
+	      /*The if from hell in the other way*/
+	      if(
+		 /*if high in other direction exist, change direction*/
+		 /*High wanting*/
+		 (!list_empty (&bus->out_high->waiters) ||
+		  (task->priority == HIGH && task->direction == SENDER && starting)
+		  ) ||
+		 /*if normal waiting and no normal using, change direction*/
+		 (/*normal waiting*/
+		  (!list_empty (&bus->out->waiters) ||
+		   (task->priority == NORMAL && task->direction == SENDER && starting)
+		   ) &&
+		  /*No normal using*/
+		  (list_empty (&bus->in->waiters) &&
+		   !(task->priority == NORMAL && task->direction == RECEIVER && starting))
+		  )
+		 )
+		{
+		  printf("Chaning back direction\n");
+		  bus->next_direction = SENDER;
+		}
+	    }
+	}
     }
 
   /* if ready to change direction, do so */
@@ -227,66 +303,61 @@ void trafficController(task_t *task, bool starting)
   /* if direction shouldn't change, add task */    
   if (bus->direction == bus->next_direction)
     {
+      
+      printf("Looking to do stuff\n");
       if (bus->direction == SENDER)
 	{
-	  if (!list_empty (&bus->out_high->waiters))
+	  if (!list_empty (&bus->out_high->waiters) ||
+	      (task->priority == HIGH && task->direction == SENDER))
 	    {
-	      if (bus->running > BUS_CAPACITY)
+	      if (bus->running < BUS_CAPACITY)
 		{
 		  /* if there is space, start most relevant service */
+		  printf("Starting task\n");
 		  bus->running++;
 		  sema_up(bus->out_high);
 		}
+	      printf("Bus capacity %d is smaller than nr running %d", BUS_CAPACITY, bus->running);
 	    }
-	  else if (!list_empty (&bus->in_high->waiters))
+	  else if (!list_empty (&bus->out->waiters) ||
+	      (task->priority == NORMAL && task->direction == SENDER))
 	    {
-	      /* if change if direction is due, start it */
-	      bus->next_direction = RECEIVER;
-	    }
-	  else if (!list_empty (&bus->out->waiters))
-	    {
-	      if (bus->running > BUS_CAPACITY)
+	      if (bus->running < BUS_CAPACITY)
 		{
 		  /* if there is space, start most relevant service */
+		  printf("Starting task\n");
 		  bus->running++;
-		  sema_up(bus->out_high);
+		  sema_up(bus->out);
 		}
-	    }
-	  else if (!list_empty (&bus->in->waiters))
-	    {
-	      /* if change if direction is due, start it */
-	      bus->next_direction = RECEIVER;
+	      printf("Bus capacity %d is smaller than nr running %d", BUS_CAPACITY, bus->running);
 	    }
 	}
       else /* Bus is RECEIVER */
 	{
-	  if (!list_empty (&bus->in_high->waiters))
+	  if (!list_empty (&bus->in_high->waiters) ||
+	      (task->priority == HIGH && task->direction == RECEIVER))
 	    {
 	      if (bus->running < BUS_CAPACITY)
 		{
 		  /* if there is space, start most relevant service */
+		  printf("Starting task\n");
 		  bus->running++;
-		  sema_up(bus->out_high);
+		  sema_up(bus->in_high);
 		}
+	      printf("Bus capacity %d is smaller than nr running %d", BUS_CAPACITY, bus->running);
 	    }
-	  else if (!list_empty (&bus->out_high->waiters))
-	    {
-	      /* if change if direction is due, start it */
-	      bus->next_direction = RECEIVER;
-	    }
-	  else if (!list_empty (&bus->in->waiters))
+	  else if (!list_empty (&bus->in->waiters) ||
+	      (task->priority == NORMAL && task->direction == RECEIVER))
 	    {
 	      if (bus->running < BUS_CAPACITY)
 		{
 		  /* if there is space, start most relevant service */
+		  
+		  printf("Starting task\n");
 		  bus->running++;
-		  sema_up(bus->out_high);
+		  sema_up(bus->in);
 		}
-	    }
-	  else if (!list_empty (&bus->out->waiters))
-	    {
-	      /* if change if direction is due, start it */
-	      bus->next_direction = RECEIVER;
+	      printf("Bus capacity %d is smaller than nr running %d", BUS_CAPACITY, bus->running);
 	    }
 	}
     }
