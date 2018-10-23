@@ -125,7 +125,7 @@ thread_tick (void)
 {
   struct thread *t = thread_current ();
 
-  thread_foreach( timer_alarm_check, NULL);
+ /* thread_foreach( timer_alarm_check, NULL); */
 
   /* Update statistics. */
   if (t == idle_thread)

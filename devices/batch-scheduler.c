@@ -317,7 +317,7 @@ void trafficController(task_t *task, bool starting)
 		  bus->running++;
 		  sema_up(bus->out_high);
 		}
-	      printf("Bus capacity %d is smaller than nr running %d", BUS_CAPACITY, bus->running);
+	    /*  printf("Bus capacity %d is smaller than nr running %d", BUS_CAPACITY, bus->running); */
 	    }
 	  else if (!list_empty (&bus->out->waiters) ||
 	      (task->priority == NORMAL && task->direction == SENDER))
@@ -325,11 +325,11 @@ void trafficController(task_t *task, bool starting)
 	      if (bus->running < BUS_CAPACITY)
 		{
 		  /* if there is space, start most relevant service */
-		  printf("Starting task\n");
+		 /*  printf("Starting task\n"); */
 		  bus->running++;
 		  sema_up(bus->out);
 		}
-	      printf("Bus capacity %d is smaller than nr running %d", BUS_CAPACITY, bus->running);
+	    /*  printf("Bus capacity %d is smaller than nr running %d", BUS_CAPACITY, bus->running); */
 	    }
 	}
       else /* Bus is RECEIVER */
@@ -340,11 +340,11 @@ void trafficController(task_t *task, bool starting)
 	      if (bus->running < BUS_CAPACITY)
 		{
 		  /* if there is space, start most relevant service */
-		  printf("Starting task\n");
+		 /* printf("Starting task\n"); */
 		  bus->running++;
 		  sema_up(bus->in_high);
 		}
-	      printf("Bus capacity %d is smaller than nr running %d", BUS_CAPACITY, bus->running);
+	      /* printf("Bus capacity %d is smaller than nr running %d", BUS_CAPACITY, bus->running); */
 	    }
 	  else if (!list_empty (&bus->in->waiters) ||
 	      (task->priority == NORMAL && task->direction == RECEIVER))
@@ -353,11 +353,11 @@ void trafficController(task_t *task, bool starting)
 		{
 		  /* if there is space, start most relevant service */
 		  
-		  printf("Starting task\n");
+		 /* printf("Starting task\n"); */
 		  bus->running++;
 		  sema_up(bus->in);
 		}
-	      printf("Bus capacity %d is smaller than nr running %d", BUS_CAPACITY, bus->running);
+	    /*  printf("Bus capacity %d is smaller than nr running %d", BUS_CAPACITY, bus->running); */
 	    }
 	}
     }
