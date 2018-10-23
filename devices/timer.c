@@ -24,7 +24,12 @@ static int64_t ticks;
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
 
+/* A linked list holding threads to be woken sorted by time to be woken */
+static struct list waiting_list;
+
 static intr_handler_func timer_interrupt;
+static void add_waiter (struct thread *t);
+static void wake_waiters ();
 static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
@@ -37,8 +42,48 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  list_init(&waiting_list);
 }
 
+/*add sorter func for waiter
+todo: check direction is correct*/
+bool
+is_after(const struct list_elem *a, const struct list_elem *b, void *aux)
+{
+  struct thread *c = list_entry (a, struct thread, time);
+  struct thread *d = list_entry (b, struct thread, time);
+  return c->alarm > d->alarm;
+}
+
+void
+add_waiter (struct thread *t)
+{
+  enum intr_level old_level = intr_disable ();
+  /* insert thread at correct time in alarm_list */
+  list_insert_ordered(&waiting_list, &t->time, is_after, NULL); 
+
+  intr_set_level (old_level);
+}
+
+void
+wake_waiters ()
+{
+  struct list_elem *e;
+  struct thread *t;
+
+  for (e = list_begin (&waiting_list); e != list_end (&waiting_list); e = list_next (e))
+    {
+      t = list_entry (e, struct thread, time);
+      if ( t->alarm > timer_ticks() )
+	{
+	  break;
+	}
+      thread_unblock(t);
+      list_remove (e);
+    }
+  return;
+}
+	 
 /* Calibrates loops_per_tick, used to implement brief delays. */
 void
 timer_calibrate (void) 
@@ -92,8 +137,6 @@ timer_sleep (int64_t ticks)
   if( ticks > 0 )
     { 
       int64_t start;
-
-/*
       enum intr_level old_level;
       struct thread *t;
 
@@ -101,24 +144,20 @@ timer_sleep (int64_t ticks)
       start = timer_ticks ();
       t = thread_current();
       t->alarm = start + ticks;
-      t->alarm_set = true; add_waiter(t);
-      //Add thread to alarmed_threads list
-      thread_block(); NOOP;
+      add_waiter(t);
       intr_set_level (old_level);
-
-*/
-      
+      /*
 	ASSERT (intr_get_level () == INTR_ON);
 	while (timer_elapsed (start) < ticks) 
 	thread_yield ();
-
+      */
       
     }
 }
 
 /* Checks if the thread's alarm was set, has passed and the thread should be unblocked.
  * If it should, then it is.
- */
+ *
 void
 timer_alarm_check (struct thread *t, void *aux)
 {
@@ -129,6 +168,8 @@ timer_alarm_check (struct thread *t, void *aux)
       thread_unblock(t);
     }
 }
+*/
+
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
    turned on. */
@@ -231,10 +272,7 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-/*
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-wake_waiters();
-*/
+  wake_waiters();
   enum intr_level old_level;
   
   old_level = intr_disable ();
