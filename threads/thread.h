@@ -89,8 +89,8 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
-    int64_t alarm;			/* Absolute alarm time */
-    struct list_elem time;              /* Reference to the relative alarm time in alarm list */
+    int64_t alarm;			/* Alarmy boy */
+    bool alarm_set;			/* If alarmy boy */
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
