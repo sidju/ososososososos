@@ -92,22 +92,23 @@ timer_sleep (int64_t ticks)
   if( ticks > 0 )
     { 
       int64_t start;
-      enum intr_level old_level;
-      struct thread *t;
+      enum intr_level old_level; 
+      /* struct thread *t; */
 
-      old_level = intr_disable();
-      start = timer_ticks ();
-      t = thread_current();
-      t->alarm = start + ticks;
-      t->alarm_set = true;
-      //Add thread to alarmed_threads list
-      thread_block();
+       old_level = intr_disable();
+       start = timer_ticks ();
+      /* t = thread_current(); */
+      /* t->alarm = start + ticks; */
+      /* t->alarm_set = true; */
+      /* //Add thread to alarmed_threads list */
+      /* thread_block(); */
       intr_set_level (old_level);
-      /*
+ 
+      
 	ASSERT (intr_get_level () == INTR_ON);
 	while (timer_elapsed (start) < ticks) 
 	thread_yield ();
-      */
+      
     }
 }
 

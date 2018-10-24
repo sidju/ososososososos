@@ -140,7 +140,7 @@ thread_tick (void)
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
 
-  thread_foreach( timer_alarm_check, NULL);
+  /* thread_foreach( timer_alarm_check, NULL); */
  
 }
 
