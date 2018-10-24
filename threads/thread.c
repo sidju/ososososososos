@@ -125,8 +125,6 @@ thread_tick (void)
 {
   struct thread *t = thread_current ();
 
-  thread_foreach( timer_alarm_check, NULL);
-
   /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
@@ -137,9 +135,13 @@ thread_tick (void)
   else
     kernel_ticks++;
 
+  
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
+
+  thread_foreach( timer_alarm_check, NULL);
+ 
 }
 
 /* Prints thread statistics. */

@@ -117,11 +117,14 @@ timer_sleep (int64_t ticks)
 void
 timer_alarm_check (struct thread *t, void *aux)
 {
-  if ( (t->alarm <= timer_ticks()) && (t->alarm_set) && (t->status == THREAD_BLOCKED))
+  if ((t->alarm_set) && (t->status == THREAD_BLOCKED))
     {
-      t->alarm_set = false;
-      //Remove from alarmed_list, if created
-      thread_unblock(t);
+      if ( t->alarm <= timer_ticks() )
+	{
+	  t->alarm_set = false;
+	  //Remove from alarmed_list, if created
+	  thread_unblock(t);
+	}
     }
 }
 
