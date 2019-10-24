@@ -1,0 +1,202 @@
+			+--------------------+
+			|    EDA092/DIT400   |
+			| LAB ASSIGNMENT 2:  |
+			| 	THREADS      |
+			|   DESIGN DOCUMENT  |
+			+--------------------+
+				   
+---- GROUP 16 ----
+
+>> Fill in the group number, names and email addresses of your group members.
+
+David Olofsson sidju@protonmai.com
+Rebecca Carlson rm.carlson@hotmail.com
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, please give them here.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course staff.
+
+
+	     ALARM CLOCK
+			     ===========
+
+---- DATA STRUCTURES ----
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+Added variables in timer:
+* static struct list sleep_list;
+	A linked list of the currently sleeping threads in the order they should wake.
+
+Added functions in timer:
+* void timer_wake_sleepers (void);
+	Called every tick from thread.c. Wakes the sleeping threads that should wake.
+
+* bool timer_is_after (const struct list_elem *a, const struct list_elem *b, void *aux);
+	A comparator to keep the list of sleeping threads sorted, which gives better performance.
+	
+
+Added struct members to thread:
+* int64_t alarm;
+	The start time + the amount of ticks until the thread is to awaken.
+	
+* struct list_elem timelem;
+	The list element for the sleeper list.
+
+
+---- ALGORITHMS ----
+
+>> A2: Briefly describe what happens in a call to timer_sleep(),
+>> including the effects of the timer interrupt handler.
+
+	The thread->alarm is set to the sleep time + current time, to get the wakeup time.
+	The thread->timelem list element is added to the sleep_list based on thread->alarm.
+
+	When all is setup, the thread blocks itself, trusting that it will be unblocked by
+	the kernel at the correct time.
+
+>> A3: What steps are taken to minimize the amount of time spent in
+>> the timer interrupt handler?
+
+	By storing the sleeping threads in a separate sorted list, rather than in the all_threads list
+	we only need to iterate through the list a few steps each interrupt.
+
+---- SYNCHRONIZATION ----
+
+>> A4: How are race conditions avoided when multiple threads call
+>> timer_sleep() simultaneously?
+
+	The critical part of sleep is executed with interrupts disabled. 
+	Those are getting the time of the alarm call and blocking the thread in one run.
+	Since blocking the thread turns interrupts back on in the new thread we only
+	need to keep track of the interrupt state of the sleeping thread in preparation for the exit.
+
+>> A5: How are race conditions avoided when a timer interrupt occurs
+>> during a call to timer_sleep()?
+
+	Interrupts are off during execution. The kernel handles them after the thread blocking.
+
+---- RATIONALE ----
+
+>> A6: Why did you choose this design?  In what ways is it superior to
+>> another design you considered?
+
+	The most natural solution when thinking of processing time.
+	By mostly using built in functions and lists, as well as basing the code on
+	existing code, we need to code less for the performance.
+
+			    BATCH SCHEDULING
+			    ================
+---- DATA STRUCTURES ----
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, semaphore, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+
+
+/* bus */
+/* Creates the bus in order to transport sender & receiver tasks. */
+
+	typedef struct {
+		struct semaphore *out_high;
+		struct semaphore *out;
+		struct semaphore *in_high;
+		struct semaphore *in;
+				  
+		int running;
+		int direction;
+		int next_direction;
+	} bus_t;
+
+
+/* task semaphores */
+/* Four different semphores to keep track of each state a task can have. */
+
+	struct semaphore *out_high;
+	struct semaphore *out;
+	struct semaphore *in_high;
+	struct semaphore *in;
+
+
+/* get_sema */
+/* Gets the correct semaphore for the given task, depending on task direction and priority */
+
+	struct semaphore* get_sema(task_t *);
+
+
+/* a,b,c,d-semaphores */
+/* Instantiates the semaphore pointers within the bus struct */
+
+	static struct semaphore a;
+	static struct semaphore b;
+	static struct semaphore c;
+	static struct semaphore d;
+
+
+
+ 
+
+---- SYNCHRONIZATION ----
+
+>> C1: How does your solution guarantee that no more that 3 tasks
+>> are using the bus in the same direction?
+
+	1. In the 'bus' struct, we added the member "int running" which holds the current amount of tasks using the bus. Whenever a task is added or removed from the bus this value decreases or increases to match. That way we can check whether there is room or not on the bus, and if a task may be added.
+
+
+>> C2: What prevents tasks from opposite directions from using the
+>> bus simultaneously?
+
+>> C3: How does your solution grant priority to high priority tasks over
+>> the waiting tasks in the same direction?
+
+	2 & 3. We decided to use four different semaphores to represent the four different variations of direction and priority. These are used within our added trafficController(), who's function is to control the flow of tasks. We are able to look at the current task at hand, determine its priority and direction, and through if-statements decide what they are allowed and not allowed to do.
+
+>> C4: How do you guarantee that despite having priority, high priority
+>> tasks do not start using the bus while there are still using
+>> it in the oposite direction?
+
+	4. In the 'bus' struct, we added the members "int direction" and "int next-direction", which dictate the current and next direction task flow is allowed. We check in trafficController whether or not the direction should change or not. A reason could be because of an empty waiting list of the current or because there is a higher priority task waiting on the other side, etc. 
+
+---- RATIONALE ----
+
+>> C6: Why did you choose this design? Did you consider other design 
+>> alternatives? In what ways is it superior to another design you considered?
+
+	6. We decided against having locks and instead used more semaphores, to use the built in queues.
+   We also refrained from locking, by disabling interrupts throughout trafficcontroller to 
+   ensure stable state. This might not be the best solution, since it is a fairly big function,
+   but it is the best we managed to handle all the possible states on the bus securely.
+
+
+			   SURVEY QUESTIONS (optional)
+			   ===========================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the course evaluations at the end of
+the quarter.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters?
+
+>> Any other comments?

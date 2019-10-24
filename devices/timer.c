@@ -105,8 +105,10 @@ timer_sleep (int64_t ticks)
       t = thread_current();
       t->alarm = start + ticks;
       //Add thread to alarmed_threads list
-      timer_add_waiter(t);
-      //printf("A thread woke up.\n");
+      list_insert_ordered(&sleep_list, &t->timelem, timer_is_after, NULL); 
+      //block until called
+      thread_block();
+      //restore interrupt settings
       intr_set_level (old_level);
       
       /* 
@@ -160,20 +162,6 @@ timer_is_after (const struct list_elem *a, const struct list_elem *b, void *aux)
   struct thread *tb = list_entry (b, struct thread, timelem);
   return ta->alarm < tb->alarm;
 }
-
-void
-timer_add_waiter (struct thread *t)
-{
-  /* insert thread at correct time in alarm_list */
-
-  //printf("Adding a waiter\n");
-  list_insert_ordered(&sleep_list, &t->timelem, timer_is_after, NULL); 
-  /*
-  list_push_back (&waiting_list, &t->time);
-  */
-  thread_block();
-}
-
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
    turned on. */
@@ -237,33 +225,6 @@ timer_ndelay (int64_t ns)
 {
   real_time_delay (ns, 1000 * 1000 * 1000);
 }
-
-
-
-/*
- *
- *
- *
- * Squid
- *
- *
- *
- */
-/*
-void
-sleep (int64_t ticks) 
-{
-
-  ticks = ticks + timer_ticks();
-  set_alarm(ticks);
-
-  ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
-   thread_block();
-   return;
-}
-*/
 
 /* Prints timer statistics. */
 void
