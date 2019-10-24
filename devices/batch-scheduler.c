@@ -104,7 +104,7 @@ void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
 {
  /* printf("scheduling starting\n"); */
  unsigned int i;
-
+ /*  printf("Start scheduling\n"); */
   for(i = 0; i < num_tasks_send; i++)
     {
       thread_create ("", 0, senderTask, NULL);
@@ -121,7 +121,7 @@ void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
     {
       thread_create ("", 1, receiverPriorityTask, NULL);
     }
-   /* printf("Scheduling DONE\n"); */
+  /* printf("Scheduling DONE\n"); */
 }
 
 /* Normal task,  sending data to the accelerator */
@@ -175,7 +175,7 @@ void transferData(task_t task)
 {
   /*Sleepy boy (Does the task/data transfer).
   timer_usleep(1);*/
- /* printf("Doing stuffs\n"); */
+  /* printf("Doing stuffs\n"); */
 }
 
 /* task releases the slot */
@@ -370,17 +370,13 @@ void trafficController(task_t *task, bool starting)
 /* 
    batchScheduler:
    lots of loops declaring threads
-
    getSlot:
    add self to correct semaphor queue (always full)
    run trafficController(STARTING) to get semaphor if possible
-
    leaveSlot:
    run trafficController(STOPPING) to give semaphor to it
-
    Semaphores held by controller is bus queues
    int holds current users on the bus
    Direction shown by current_direction
    When changing direction, set next_direction 
-
 */

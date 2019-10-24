@@ -3,7 +3,6 @@
 
 #include <round.h>
 #include <stdint.h>
-#include <list.h>
 #include "threads/thread.h"
 
 /* Number of timer interrupts per second. */
@@ -17,6 +16,9 @@ int64_t timer_elapsed (int64_t);
 
 /* Sleep and yield the CPU to other threads. */
 void timer_sleep (int64_t ticks);
+void timer_wake_sleepers (void);
+bool timer_is_after (const struct list_elem *a, const struct list_elem *b, void *aux);
+void timer_add_waiter (struct thread *t);
 void timer_msleep (int64_t milliseconds);
 void timer_usleep (int64_t microseconds);
 void timer_nsleep (int64_t nanoseconds);
