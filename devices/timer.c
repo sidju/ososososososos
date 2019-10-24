@@ -30,6 +30,9 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
+/* List of all sleeping processes in the order they should wake */
+static struct list sleep_list;
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
@@ -37,6 +40,7 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  list_init (&sleep_list);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -93,41 +97,83 @@ timer_sleep (int64_t ticks)
     { 
       int64_t start;
       enum intr_level old_level; 
-      /* struct thread *t; */
+      struct thread *t;
 
-       old_level = intr_disable();
-       start = timer_ticks ();
-      /* t = thread_current(); */
-      /* t->alarm = start + ticks; */
-      /* t->alarm_set = true; */
-      /* //Add thread to alarmed_threads list */
-      /* thread_block(); */
+      old_level = intr_disable();
+      start = timer_ticks ();
+      //printf("A thread wants to sleep.\n");
+      t = thread_current();
+      t->alarm = start + ticks;
+      //Add thread to alarmed_threads list
+      timer_add_waiter(t);
+      //printf("A thread woke up.\n");
       intr_set_level (old_level);
- 
       
-	ASSERT (intr_get_level () == INTR_ON);
-	while (timer_elapsed (start) < ticks) 
-	thread_yield ();
-      
+      /* 
+	 ASSERT (intr_get_level () == INTR_ON);
+	 while (timer_elapsed (start) < ticks) 
+	 thread_yield ();
+      */
     }
 }
 
-/* Checks if the thread's alarm was set, has passed and the thread should be unblocked.
- * If it should, then it is.
- */
+/* Check the wake time on all threads, enabling those done sleeping. */
 void
-timer_alarm_check (struct thread *t, void *aux)
+timer_wake_sleepers ()
 {
-  if ((t->alarm_set) && (t->status == THREAD_BLOCKED))
+  struct list_elem *e;
+
+  ASSERT (intr_get_level () == INTR_OFF);
+
+  for (e = list_begin (&sleep_list); e != list_end (&sleep_list);
+       e = list_next (e))
     {
+      struct thread *t = list_entry (e, struct thread, timelem);
+      // If we reach a thread we shouldn't wake we have woken all we should, since the list is sorted.
       if ( t->alarm <= timer_ticks() )
 	{
-	  t->alarm_set = false;
-	  //Remove from alarmed_list, if created
+	  // Unblock
 	  thread_unblock(t);
+	  // Remove the current element from the list
+	  list_remove(&t->timelem);
+	  // Then return, to allow the unblocked thread to be scheduled
+	  //return;
 	}
-    }
+      else
+	{
+	  // we are caught up, return
+	  return;
+	}
+    }  
 }
+
+/* 
+ * Adds the current thread to the right spot in the wake queue (sleep_list)
+ */
+
+/* add sorter func for waiter
+   todo: check direction is correct */
+bool
+timer_is_after (const struct list_elem *a, const struct list_elem *b, void *aux)
+{
+  struct thread *ta = list_entry (a, struct thread, timelem);
+  struct thread *tb = list_entry (b, struct thread, timelem);
+  return ta->alarm < tb->alarm;
+}
+
+void
+timer_add_waiter (struct thread *t)
+{
+  /* insert thread at correct time in alarm_list */
+
+  //printf("Adding a waiter\n");
+  list_insert_ordered(&sleep_list, &t->timelem, timer_is_after, NULL); 
+  /*
+  list_push_back (&waiting_list, &t->time);
+  */
+  thread_block();
+}
+
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
    turned on. */
